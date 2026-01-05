@@ -1,7 +1,9 @@
 # 📅 Bookingly
 
-**Bookingly** is a lightweight, modern, **Calendly-style booking system** designed for **short-term, controlled scheduling** with strict access rules.  
-It is built to be **free**, **reliable**, and **clean**, focusing on correctness over scale.
+**Bookingly** is a lightweight, modern **booking system** built for short-term, controlled usage.  
+It focuses on **correctness, simplicity, and zero-cost deployment**, not long-term scale.
+
+Frontend is a **Vite + React SPA**, backed by **Supabase Auth & Postgres**.
 
 ---
 
@@ -9,9 +11,9 @@ It is built to be **free**, **reliable**, and **clean**, focusing on correctness
 
 - Handle bookings for short-term events or sessions
 - Restrict access to **college users only**
-- Avoid paid scheduling tools
-- Enforce strict booking rules without overengineering
-- Ship a modern, professional UI quickly
+- Avoid paid tools like Calendly
+- Ship fast with a clean, modern UI
+- Keep logic simple and reliable
 
 ---
 
@@ -30,15 +32,16 @@ It is built to be **free**, **reliable**, and **clean**, focusing on correctness
 ## 🧱 Tech Stack
 
 ### Frontend
-- **Next.js (App Router)**
+- **Vite + React**
+- **TypeScript**
 - **Tailwind CSS**
-- Modern, responsive UI
-- Subtle glassmorphism (white-only)
+- **Lucide Icons**
+- SPA (no SSR)
 
 ### Authentication
 - **Supabase Auth**
 - **Google OAuth**
-- Domain restriction (e.g. `@college.edu`)
+- College domain restriction (e.g. `@college.edu`)
 
 ### Backend / Data
 - **Supabase Postgres**
@@ -46,20 +49,20 @@ It is built to be **free**, **reliable**, and **clean**, focusing on correctness
 - Atomic booking transactions
 
 ### Hosting
-- **Vercel (free tier)**
+- **Vercel** (Vite preset, free tier)
 
 ---
 
 ## 🎨 UI / UX Guidelines
 
 - White background only (no dark mode)
-- Glassmorphism cards:
+- Subtle glassmorphism:
   - `bg-white/60`
   - `backdrop-blur-md`
   - soft shadows
 - Bold, modern typography
 - Mobile-first, fully responsive
-- Clear UI states:
+- Clear states:
   - loading
   - success
   - error
@@ -74,3 +77,4 @@ It is built to be **free**, **reliable**, and **clean**, focusing on correctness
 id
 start_time
 capacity = 5
+booked_count
