@@ -1,4 +1,5 @@
-import { useState } from "react"
+import { supabase } from "../lib/supabase"
+import { useEffect, useState } from "react"
 import { useAdminData, AdminSlot } from "../hooks/useAdminData"
 import { useBooking } from "../hooks/useBooking"
 import Loader from "../components/Loader"
@@ -10,6 +11,45 @@ export default function Admin({ onBack }: { onBack: () => void }) {
 
     const [showCancelModal, setShowCancelModal] = useState(false)
     const [bookingToCancel, setBookingToCancel] = useState<string | null>(null)
+    const [currentUser, setCurrentUser] = useState<{ id: string; name: string; email: string } | null>(null)
+    const [allAdmins, setAllAdmins] = useState<Array<{ id: string; name: string; email: string }>>([])
+    const [showAdminDropdown, setShowAdminDropdown] = useState<string | null>(null)
+
+    useEffect(() => {
+        const fetchAdmins = async () => {
+            const { data: { session } } = await supabase.auth.getSession()
+            if (session?.user?.email) {
+                const { data } = await supabase
+                    .from('authorized_users')
+                    .select('id, name, email')
+                    .eq('role', 'admin')
+
+                if (data) {
+                    setAllAdmins(data)
+                    const current = data.find(a => a.email.toLowerCase() === session.user.email!.toLowerCase())
+                    if (current) setCurrentUser(current)
+                }
+            }
+        }
+        fetchAdmins()
+    }, [])
+
+    const toggleAssignment = async (slotId: string, adminId: string) => {
+        const { data: existing } = await supabase
+            .from('slot_admins')
+            .select('id')
+            .eq('slot_id', slotId)
+            .eq('admin_id', adminId)
+            .single()
+
+        if (existing) {
+            await supabase.from('slot_admins').delete().eq('id', existing.id)
+        } else {
+            await supabase.from('slot_admins').insert({ slot_id: slotId, admin_id: adminId })
+        }
+        setShowAdminDropdown(null)
+        refetch()
+    }
 
     const openCancelModal = (bookingId: string) => {
         setBookingToCancel(bookingId)
@@ -144,6 +184,83 @@ export default function Admin({ onBack }: { onBack: () => void }) {
                                     <div className="hidden sm:block text-right">
                                         <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">Registration Status</p>
                                         <p className="text-2xl font-black text-slate-900 leading-none">{count} <span className="text-slate-200 text-sm">/ {capacity}</span></p>
+                                    </div>
+                                </div>
+
+                                {/* Admin Attendance Section */}
+                                <div className="px-4 py-2 sm:px-6 sm:py-3 bg-slate-50/30 border-b border-slate-50 flex flex-wrap items-center gap-2">
+                                    <div className="flex items-center gap-1.5 mr-2">
+                                        <span className="w-1.5 h-1.5 rounded-full bg-slate-300" />
+                                        <p className="text-[10px] sm:text-[11px] font-black text-slate-400 uppercase tracking-widest">Admins Assigned:</p>
+                                    </div>
+
+                                    {slot.slot_admins && slot.slot_admins.length > 0 ? (
+                                        <div className="flex flex-wrap gap-1.5">
+                                            {slot.slot_admins.map((sa) => (
+                                                <div key={sa.id} className="bg-white border border-slate-100 rounded-lg px-2 py-1 flex items-center gap-2 shadow-sm group/tag transition-all hover:border-red-100 hover:bg-red-50/30">
+                                                    <span className="text-[11px] font-bold text-slate-600">
+                                                        {sa.authorized_users?.name || sa.authorized_users?.email?.split('@')[0] || 'Admin'}
+                                                    </span>
+                                                    <button
+                                                        onClick={() => toggleAssignment(slot.id, sa.admin_id)}
+                                                        className="text-slate-200 hover:text-red-500 transition-colors"
+                                                    >
+                                                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M6 18L18 6M6 6l12 12" />
+                                                        </svg>
+                                                    </button>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    ) : (
+                                        <p className="text-[10px] font-bold text-slate-300 uppercase italic">No admins assigned</p>
+                                    )}
+
+                                    <div className="relative ml-auto">
+                                        <button
+                                            onClick={() => setShowAdminDropdown(showAdminDropdown === slot.id ? null : slot.id)}
+                                            className="text-[10px] font-black text-blue-500 hover:text-blue-600 flex items-center gap-1 px-2 py-1 rounded-lg hover:bg-blue-50 transition-all uppercase tracking-widest"
+                                        >
+                                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M12 4v16m8-8H4" />
+                                            </svg>
+                                            Add Admin
+                                        </button>
+
+                                        {showAdminDropdown === slot.id && (
+                                            <div className="absolute right-0 bottom-full mb-2 w-48 bg-white rounded-2xl shadow-xl border border-slate-100 py-2 z-10 animate-in fade-in slide-in-from-bottom-2 duration-200">
+                                                {currentUser && !slot.slot_admins?.some(sa => sa.admin_id === currentUser.id) && (
+                                                    <button
+                                                        onClick={() => toggleAssignment(slot.id, currentUser.id)}
+                                                        className="w-full text-left px-4 py-2 text-xs font-bold text-slate-700 hover:bg-blue-50 hover:text-blue-600 transition-colors flex items-center gap-2"
+                                                    >
+                                                        <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+                                                        Add Yourself
+                                                    </button>
+                                                )}
+
+                                                <div className="px-4 py-1.5">
+                                                    <p className="text-[9px] font-black text-slate-300 uppercase tracking-widest">Assign Others</p>
+                                                </div>
+
+                                                {allAdmins
+                                                    .filter(admin => !slot.slot_admins?.some(sa => sa.admin_id === admin.id) && admin.id !== currentUser?.id)
+                                                    .map(admin => (
+                                                        <button
+                                                            key={admin.id}
+                                                            onClick={() => toggleAssignment(slot.id, admin.id)}
+                                                            className="w-full text-left px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-50 transition-colors"
+                                                        >
+                                                            {admin.name || admin.email}
+                                                        </button>
+                                                    ))}
+
+                                                {(!allAdmins.some(admin => !slot.slot_admins?.some(sa => sa.admin_id === admin.id) && admin.id !== currentUser?.id) &&
+                                                    (!currentUser || slot.slot_admins?.some(sa => sa.admin_id === currentUser.id))) && (
+                                                        <p className="px-4 py-2 text-[10px] font-bold text-slate-400 italic">No one else available</p>
+                                                    )}
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
 

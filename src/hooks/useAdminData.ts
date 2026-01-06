@@ -10,6 +10,14 @@ export interface AdminSlot extends Slot {
         phone: string;
         created_at: string;
     }>;
+    slot_admins: Array<{
+        id: string;
+        admin_id: string;
+        authorized_users: {
+            name: string;
+            email: string;
+        }
+    }>;
 }
 
 export function useAdminData() {
@@ -35,13 +43,21 @@ export function useAdminData() {
                         email,
                         phone,
                         created_at
+                    ),
+                    slot_admins (
+                        id,
+                        admin_id,
+                        authorized_users (
+                            name,
+                            email
+                        )
                     )
                 `)
                 .gte('end_time', new Date().toISOString())
                 .order('start_time', { ascending: true })
 
             if (slotsError) throw slotsError
-            setData(Array.isArray(slots) ? slots : [])
+            setData((slots as any) as AdminSlot[])
         } catch (err: any) {
             setError(err.message)
         } finally {
@@ -62,6 +78,11 @@ export function useAdminData() {
             .on(
                 'postgres_changes',
                 { event: '*', schema: 'public', table: 'bookings' },
+                () => fetchData()
+            )
+            .on(
+                'postgres_changes',
+                { event: '*', schema: 'public', table: 'slot_admins' },
                 () => fetchData()
             )
             .subscribe()

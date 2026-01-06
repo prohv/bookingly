@@ -45,11 +45,14 @@ export default function Login() {
 
             <div className="max-w-md w-full space-y-8 bg-white/40 backdrop-blur-xl p-8 rounded-3xl border border-white/20 shadow-2xl relative z-10">
                 <div className="text-center">
-                    <h1 className="text-4xl font-extrabold tracking-tight text-slate-900 mb-2">
-                        Bookingly
-                    </h1>
+                    <div className="flex items-center justify-center gap-2.5 mb-6 animate-in fade-in slide-in-from-top-4 duration-1000">
+                        <img src="/bookingly-logo.svg" alt="Bookingly Logo" className="w-10 h-10 sm:w-12 sm:h-12 flex-shrink-0" />
+                        <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight text-slate-900">
+                            Bookingly
+                        </h1>
+                    </div>
                     <p className="text-slate-500 font-medium">
-                        Sign in to manage your bookings
+                        Sign in with vit email to book a slot
                     </p>
                 </div>
 
@@ -65,7 +68,7 @@ export default function Login() {
                             autoComplete="email"
                             required
                             className="input-field"
-                            placeholder="name@example.com"
+                            placeholder="name@vitstudent.ac.in"
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
                         />

@@ -82,6 +82,7 @@ create index if not exists idx_slots_start_time
 create table if not exists public.authorized_users (
   id uuid primary key default gen_random_uuid(),
   email text unique not null,
+  name text, -- New column for display names
   role text not null check (role in ('participant', 'admin')),
   created_at timestamptz default now()
 );
@@ -95,6 +96,45 @@ create policy "Public read for auth check"
   for select
   to public
   using (true);
+
+-- =========================
+-- slot_admins table (Junction for admin Attendance)
+-- =========================
+create table if not exists public.slot_admins (
+  id uuid primary key default gen_random_uuid(),
+  slot_id uuid not null references public.slots(id) on delete cascade,
+  admin_id uuid not null references public.authorized_users(id) on delete cascade,
+  created_at timestamptz default now(),
+
+  -- Ensure an admin isn't added twice to the same slot
+  unique(slot_id, admin_id)
+);
+
+-- Indexes
+create index if not exists idx_slot_admins_slot_id on public.slot_admins(slot_id);
+create index if not exists idx_slot_admins_admin_id on public.slot_admins(admin_id);
+
+-- Enable RLS
+alter table public.slot_admins enable row level security;
+
+-- Allow public read
+create policy "Allow public read access to slot_admins"
+  on public.slot_admins
+  for select
+  to public
+  using (true);
+
+-- Allow authenticated users (Admins) to manage assignments
+create policy "Allow auth users to manage slot assignments"
+  on public.slot_admins
+  for all
+  to authenticated
+  using (true)
+  with check (true);
+
+-- ENABLE REALTIME REPLICATION
+alter publication supabase_realtime add table public.slot_admins;
+alter publication supabase_realtime add table public.authorized_users;
 
 -- =========================
 -- RLS Policies for Slots/Bookings
