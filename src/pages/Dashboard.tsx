@@ -50,36 +50,38 @@ export default function Dashboard({ isAdmin, onViewAdmin }: { isAdmin?: boolean,
 
     return (
         <div className="min-h-screen bg-white">
-            <header className="max-w-4xl mx-auto px-4 py-8 flex justify-between items-center">
-                <div className="flex items-center gap-4">
-                    <div>
-                        <h1 className="text-3xl font-extrabold text-slate-900 leading-tight">Dashboard</h1>
-                        <p className="text-slate-500 font-medium">Available booking slots</p>
+            <header className="bg-white border-b border-slate-100 sticky top-0 z-50">
+                <div className="max-w-4xl mx-auto px-4 py-3 flex justify-between items-center">
+                    <div className="flex items-center gap-4">
+                        <div>
+                            <h1 className="text-xl sm:text-2xl font-black text-slate-900 leading-tight">Dashboard</h1>
+                            <p className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-widest">Available Slots</p>
+                        </div>
                     </div>
-                </div>
-                <div className="flex items-center gap-6">
-                    <div className="text-right hidden sm:block">
-                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Logged in as</p>
-                        <p className="text-xs font-bold text-slate-600 italic">{isAdmin ? 'Admin' : 'Participant'}</p>
-                    </div>
-                    {isAdmin && (
+                    <div className="flex items-center gap-3 sm:gap-6">
+                        <div className="text-right hidden md:block">
+                            <p className="text-[10px] font-bold text-slate-300 uppercase tracking-widest leading-none mb-1">Role</p>
+                            <p className="text-xs font-black text-slate-500 uppercase leading-none">{isAdmin ? 'Admin' : 'Participant'}</p>
+                        </div>
+                        {isAdmin && (
+                            <button
+                                onClick={onViewAdmin}
+                                className="text-[11px] sm:text-xs font-black text-white bg-slate-900 hover:bg-blue-600 px-4 py-2 sm:px-5 sm:py-2.5 rounded-xl shadow-lg shadow-slate-100 transition-all active:scale-95 uppercase tracking-widest"
+                            >
+                                Admin view
+                            </button>
+                        )}
                         <button
-                            onClick={onViewAdmin}
-                            className="text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 px-5 py-2.5 rounded-xl shadow-lg shadow-blue-200 transition-all active:scale-95"
+                            onClick={handleLogout}
+                            className="text-[11px] sm:text-sm font-bold text-slate-400 hover:text-slate-900 transition-colors"
                         >
-                            Admin Control Panel
+                            Sign out
                         </button>
-                    )}
-                    <button
-                        onClick={handleLogout}
-                        className="text-sm font-bold text-slate-400 hover:text-slate-900 transition-colors"
-                    >
-                        Sign out
-                    </button>
+                    </div>
                 </div>
             </header>
 
-            <main className="max-w-4xl mx-auto px-4 py-8">
+            <main className="max-w-4xl mx-auto px-4 py-6 sm:py-8">
                 {/* User Booking Status */}
                 {!userBookingLoading && booking && (
                     <MyBookingCard
