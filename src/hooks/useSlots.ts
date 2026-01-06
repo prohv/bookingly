@@ -12,30 +12,38 @@ export function useSlots() {
   }, [])
 
   const fetchSlots = async () => {
-    setLoading(true)
-    setError(null)
+    try {
+      setLoading(true)
+      setError(null)
 
-    const { data, error } = await supabase
-      .from('slots')
-      .select(`
-        id,
-        start_time,
-        end_time,
-        bookings ( id )
-      `)
+      const { data, error } = await supabase
+        .from('slots')
+        .select(`
+          id,
+          start_time,
+          end_time,
+          capacity,
+          bookings ( id )
+        `)
 
-    if (error) {
-      setError(error.message)
+      if (error) throw error
+
+      if (!data) {
+        setSlots([])
+        return
+      }
+
+      const availableSlots = data.filter(
+        (slot: any) => (slot.bookings?.length || 0) < (slot.capacity || 1)
+      )
+
+      setSlots(availableSlots)
+    } catch (err: any) {
+      console.error('Error fetching slots:', err)
+      setError(err.message || 'Failed to load slots')
+    } finally {
       setLoading(false)
-      return
     }
-
-    const availableSlots = data.filter(
-      (slot) => slot.bookings.length === 0
-    )
-
-    setSlots(availableSlots)
-    setLoading(false)
   }
 
   return { slots, loading, error, refetch: fetchSlots }

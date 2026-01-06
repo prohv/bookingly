@@ -6,7 +6,7 @@ import Loader from '../components/Loader'
 import { BookingForm } from '../components/BookingForm'
 import { supabase } from '../lib/supabase'
 
-export default function Dashboard() {
+export default function Dashboard({ isAdmin }: { isAdmin?: boolean }) {
     const { slots, loading: slotsLoading, error: slotsError, refetch } = useSlots()
     const { bookSlot, loading: bookingLoading, error: bookingError } = useBooking()
     const [selectedSlotId, setSelectedSlotId] = useState<string | null>(null)

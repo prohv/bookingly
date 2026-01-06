@@ -11,6 +11,19 @@ export default function Login() {
         setLoading(true)
         setMessage(null)
 
+        // Check if user is authorized
+        const { data: authorized, error: checkError } = await supabase
+            .from('authorized_users')
+            .select('email')
+            .eq('email', email.toLowerCase())
+            .single()
+
+        if (checkError || !authorized) {
+            setMessage({ type: 'error', text: 'This email is not authorized to access the system.' })
+            setLoading(false)
+            return
+        }
+
         const { error } = await supabase.auth.signInWithOtp({
             email,
             options: {
