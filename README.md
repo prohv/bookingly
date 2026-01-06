@@ -1,80 +1,113 @@
-# 📅 Bookingly
+# Bookingly
 
-**Bookingly** is a lightweight, modern **booking system** built for short-term, controlled usage.  
-It focuses on **correctness, simplicity, and zero-cost deployment**, not long-term scale.
-
-Frontend is a **Vite + React SPA**, backed by **Supabase Auth & Postgres**.
+A lightweight, serverless scheduling tool for booking **one-to-one time slots**.
+Designed for speed, correctness, and minimal configuration.
 
 ---
 
-## 🎯 Purpose
+## Features
 
-- Handle bookings for short-term events or sessions
-- Restrict access to **college users only**
-- Avoid paid tools like Calendly
-- Ship fast with a clean, modern UI
-- Keep logic simple and reliable
-
----
-
-## ✅ Core Rules (Non-Negotiable)
-
-- **Fixed time slots**
-- **Max 5 users per slot**
-- **College-domain–restricted access**
-- **One active booking per user**
-- Users can **modify / reschedule**
-- **Phone number required**
-- **White mode only** UI
+* Predefined time slots
+* One booking per slot (database-enforced)
+* Email-based authentication
+* Optional access restriction (domain or whitelist)
+* Reschedule and cancel bookings
+* Calendar invite (.ics) on booking
+* Static frontend, serverless backend
 
 ---
 
-## 🧱 Tech Stack
+## Non-Goals
 
-### Frontend
-- **Vite + React**
-- **TypeScript**
-- **Tailwind CSS**
-- **Lucide Icons**
-- SPA (no SSR)
+* Calendar availability syncing
+* OAuth providers
+* Recurring events
+* Complex scheduling rules
+* Custom backend servers
 
-### Authentication
-- **Supabase Auth**
-- **Google OAuth**
-- College domain restriction (e.g. `@college.edu`)
-
-### Backend / Data
-- **Supabase Postgres**
-- Row Level Security (RLS)
-- Atomic booking transactions
-
-### Hosting
-- **Vercel** (Vite preset, free tier)
+This project focuses on **simple, deterministic scheduling**.
 
 ---
 
-## 🎨 UI / UX Guidelines
+## Tech Stack
 
-- White background only (no dark mode)
-- Subtle glassmorphism:
-  - `bg-white/60`
-  - `backdrop-blur-md`
-  - soft shadows
-- Bold, modern typography
-- Mobile-first, fully responsive
-- Clear states:
-  - loading
-  - success
-  - error
-  - disabled (full slots)
+**Frontend**
+
+* React (Vite)
+* TypeScript
+* Tailwind CSS
+
+**Backend**
+
+* Supabase (Postgres + Auth + RLS)
+
+No custom APIs or servers required.
 
 ---
 
-## 🗂️ Data Model (Conceptual)
+## Architecture
 
-### Slots
-```txt
-id
-start_time
-capacity = 5
-booked_count
+```
+Slots → Database
+Users → Auth
+Bookings → DB constraints
+Invites → .ics email
+```
+
+All booking rules are enforced at the database level.
+
+---
+
+## Data Model
+
+* `slots` — available time windows
+* `bookings` — confirmed reservations
+
+  * `UNIQUE(slot_id)` prevents double booking
+* `qualified_emails` (optional) — restrict access
+
+---
+
+## Security
+
+* Authentication via email
+* Authorization enforced using Row Level Security (RLS)
+* No frontend-only validation for critical rules
+
+---
+
+## Performance
+
+* Static frontend (CDN-served)
+* Direct database access
+* Single request per booking
+* No cold starts
+
+---
+
+## Project Structure
+
+```
+supabase/   # schema, RLS, seed data
+src/
+  components/
+  hooks/
+  lib/
+  types/
+```
+
+---
+
+## Use Cases
+
+* Interview scheduling
+* Mentorship sessions
+* Office hours
+* Club or community bookings
+* Internal team scheduling
+
+---
+
+## License
+
+MIT
