@@ -41,7 +41,7 @@ export function useAdminData() {
                 .order('start_time', { ascending: true })
 
             if (slotsError) throw slotsError
-            setData(slots || [])
+            setData(Array.isArray(slots) ? slots : [])
         } catch (err: any) {
             setError(err.message)
         } finally {
