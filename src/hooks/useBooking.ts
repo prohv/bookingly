@@ -5,42 +5,16 @@ export function useBooking() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  // Helper to sync slot stats manually
+  // Helper to sync slot stats manually via secure RPC
   const syncSlotStats = async (slotId: string) => {
     try {
-      // 1. Get current booking count (the most reliable source)
-      const { count, error: countError } = await supabase
-        .from('bookings')
-        .select('*', { count: 'exact', head: true })
-        .eq('slot_id', slotId)
+      // Call the secure database function to recount and update
+      const { error: rpcError } = await supabase.rpc('sync_slot_stats', {
+        p_slot_id: slotId
+      })
 
-      if (countError) throw countError
-
-      // 2. Get slot capacity
-      const { data: slot, error: slotError } = await supabase
-        .from('slots')
-        .select('capacity')
-        .eq('id', slotId)
-        .single()
-
-      if (slotError) throw slotError
-
-      const newCount = count || 0
-      const isFull = newCount >= (slot?.capacity || 1)
-
-      // 3. Update the slot
-      const { error: updateError } = await supabase
-        .from('slots')
-        .update({
-          current_bookings: newCount,
-          is_full: isFull
-        })
-        .eq('id', slotId)
-
-      if (updateError) throw updateError
-
-      console.log(`Sync complete for slot ${slotId}: ${newCount} bookings.`)
-
+      if (rpcError) throw rpcError
+      console.log(`Sync complete for slot ${slotId} via RPC.`)
     } catch (err) {
       console.error('Error syncing slot stats:', err)
     }

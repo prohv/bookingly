@@ -17,32 +17,36 @@ create table if not exists public.slots (
     check (end_time > start_time)
 );
 
--- Function to update slot statistics automatically
-create or replace function update_slot_stats()
-returns trigger as $$
+-- =========================
+-- Secure Slot Counter RPC
+-- =========================
+
+-- This function is called by the frontend to recount a slot
+-- It is a 'security definer' so it can update the slots table even if the user can't
+create or replace function public.sync_slot_stats(p_slot_id uuid)
+returns void as $$
+declare
+  v_count int;
+  v_capacity int;
 begin
+  -- 1. Get the actual booking count
+  select count(*) into v_count
+  from public.bookings
+  where slot_id = p_slot_id;
+
+  -- 2. Get the capacity
+  select capacity into v_capacity
+  from public.slots
+  where id = p_slot_id;
+
+  -- 3. Update the slot
   update public.slots
   set 
-    current_bookings = (
-      select count(*)
-      from public.bookings
-      where public.bookings.slot_id = public.slots.id
-    ),
-    is_full = (
-      select count(*) >= public.slots.capacity
-      from public.bookings
-      where public.bookings.slot_id = public.slots.id
-    )
-  where id = coalesce(new.slot_id, old.slot_id);
-  return null;
+    current_bookings = v_count,
+    is_full = (v_count >= v_capacity)
+  where id = p_slot_id;
 end;
-$$ language plpgsql;
-
--- Trigger to run after insert or delete on bookings
-drop trigger if exists on_booking_change on public.bookings;
-create trigger on_booking_change
-after insert or delete on public.bookings
-for each row execute function update_slot_stats();
+$$ language plpgsql security definer set search_path = public;
 
 -- ENABLE REALTIME REPLICATION
 alter publication supabase_realtime add table public.slots;
@@ -90,11 +94,32 @@ create table if not exists public.authorized_users (
 -- Enable RLS
 alter table public.authorized_users enable row level security;
 
--- Allow public read access for the auth check (both anon and authenticated)
-create policy "Public read for auth check"
+-- Allow authenticated users (Admins) to see everyone
+create policy "Admins can see all authorized users"
+  on public.authorized_users
+  for select
+  to authenticated
+  using (public.is_admin());
+
+-- Users can see their own profile
+create policy "Users can see their own profile"
+  on public.authorized_users
+  for select
+  to authenticated
+  using (auth.jwt()->>'email' = email);
+
+-- Allow everyone to see Admin names/emails (Needed for Attendance UI)
+create policy "Admins are publicly visible"
   on public.authorized_users
   for select
   to public
+  using (role = 'admin');
+
+-- Keep public check for login whitelist (only for anon users to prevent authenticated crawling)
+create policy "Allow email check for login"
+  on public.authorized_users
+  for select
+  to anon
   using (true);
 
 -- =========================
@@ -125,16 +150,40 @@ create policy "Allow public read access to slot_admins"
   using (true);
 
 -- Allow authenticated users (Admins) to manage assignments
-create policy "Allow auth users to manage slot assignments"
+create policy "Only admins can manage slot assignments"
   on public.slot_admins
   for all
   to authenticated
-  using (true)
-  with check (true);
+  using (public.is_admin())
+  with check (public.is_admin());
 
 -- ENABLE REALTIME REPLICATION
 alter publication supabase_realtime add table public.slot_admins;
 alter publication supabase_realtime add table public.authorized_users;
+
+-- =========================
+-- Security Helpers
+-- =========================
+
+-- Function to check if the current user is an admin
+create or replace function public.is_admin()
+returns boolean as $$
+begin
+  return exists (
+    select 1 from public.authorized_users
+    where email = auth.jwt()->>'email'
+    and role = 'admin'
+  );
+end;
+$$ language plpgsql security definer;
+
+-- =========================
+-- Anonymous View for counting
+-- =========================
+create or replace view public.bookings_anonymous with (security_invoker = false) as
+  select id, slot_id from public.bookings;
+
+grant select on public.bookings_anonymous to public;
 
 -- =========================
 -- RLS Policies for Slots/Bookings
@@ -151,16 +200,43 @@ create policy "Allow public read access to slots"
   to public
   using (true);
 
--- Allow everyone to read bookings (needed for slot availability join)
-create policy "Allow public read access to bookings"
+-- Only admins can manually update slot data
+create policy "Only admins can update slots"
+  on public.slots
+  for update
+  to authenticated
+  using (public.is_admin())
+  with check (public.is_admin());
+
+-- Allow authenticated users to manage bookings
+drop policy if exists "Allow public read access to bookings" on public.bookings;
+
+create policy "Admins can see all bookings"
   on public.bookings
   for select
-  to public
-  using (true);
+  to authenticated
+  using (public.is_admin());
 
--- Allow authenticated users to create bookings
-create policy "Allow auth users to book"
+create policy "Users can see their own bookings"
+  on public.bookings
+  for select
+  to authenticated
+  using (auth.jwt()->>'email' = email);
+
+create policy "Admins can delete any booking"
+  on public.bookings
+  for delete
+  to authenticated
+  using (public.is_admin());
+
+create policy "Users can delete their own bookings"
+  on public.bookings
+  for delete
+  to authenticated
+  using (auth.jwt()->>'email' = email);
+
+create policy "Users can create their own bookings"
   on public.bookings
   for insert
   to authenticated
-  with check (true);
+  with check (auth.jwt()->>'email' = email);
