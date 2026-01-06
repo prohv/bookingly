@@ -5,9 +5,10 @@ type Props = {
   slots: Slot[]
   onBook: (slotId: string) => void
   loading?: boolean
+  isAnySlotBooked?: boolean
 }
 
-export function SlotList({ slots, onBook, loading }: Props) {
+export function SlotList({ slots, onBook, loading, isAnySlotBooked }: Props) {
   if (loading) return <p>Loading slots...</p>
 
   if (slots.length === 0) {
@@ -21,6 +22,7 @@ export function SlotList({ slots, onBook, loading }: Props) {
           key={slot.id}
           slot={slot}
           onBook={() => onBook(slot.id)}
+          disabled={isAnySlotBooked}
         />
       ))}
     </div>

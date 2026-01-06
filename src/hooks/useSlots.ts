@@ -9,13 +9,30 @@ export function useSlots() {
 
   useEffect(() => {
     fetchSlots()
+
+    // Subscribe to REALTIME changes
+    const channel = supabase
+      .channel('schema-db-changes')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'slots' },
+        () => fetchSlots()
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'bookings' },
+        () => fetchSlots()
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
   }, [])
 
   const fetchSlots = async () => {
     try {
       setLoading(true)
-      setError(null)
-
       const { data, error } = await supabase
         .from('slots')
         .select(`
@@ -23,24 +40,17 @@ export function useSlots() {
           start_time,
           end_time,
           capacity,
+          current_bookings,
+          is_full,
           bookings ( id )
         `)
+        .gte('end_time', new Date().toISOString())
+        .order('start_time', { ascending: true })
 
       if (error) throw error
-
-      if (!data) {
-        setSlots([])
-        return
-      }
-
-      const availableSlots = data.filter(
-        (slot: any) => (slot.bookings?.length || 0) < (slot.capacity || 1)
-      )
-
-      setSlots(availableSlots)
+      setSlots(data || [])
     } catch (err: any) {
-      console.error('Error fetching slots:', err)
-      setError(err.message || 'Failed to load slots')
+      setError(err.message)
     } finally {
       setLoading(false)
     }

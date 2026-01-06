@@ -9,11 +9,44 @@ create table if not exists public.slots (
   start_time timestamptz not null,
   end_time timestamptz not null,
   capacity int not null default 1,
+  current_bookings int not null default 0,
+  is_full boolean not null default false,
 
   -- sanity check
   constraint slots_time_check
     check (end_time > start_time)
 );
+
+-- Function to update slot statistics automatically
+create or replace function update_slot_stats()
+returns trigger as $$
+begin
+  update public.slots
+  set 
+    current_bookings = (
+      select count(*)
+      from public.bookings
+      where public.bookings.slot_id = public.slots.id
+    ),
+    is_full = (
+      select count(*) >= public.slots.capacity
+      from public.bookings
+      where public.bookings.slot_id = public.slots.id
+    )
+  where id = coalesce(new.slot_id, old.slot_id);
+  return null;
+end;
+$$ language plpgsql;
+
+-- Trigger to run after insert or delete on bookings
+drop trigger if exists on_booking_change on public.bookings;
+create trigger on_booking_change
+after insert or delete on public.bookings
+for each row execute function update_slot_stats();
+
+-- ENABLE REALTIME REPLICATION
+alter publication supabase_realtime add table public.slots;
+alter publication supabase_realtime add table public.bookings;
 
 -- =========================
 -- bookings table
@@ -24,6 +57,7 @@ create table if not exists public.bookings (
   slot_id uuid not null,
   name text not null,
   email text not null,
+  phone text not null,
 
   created_at timestamptz not null default now(),
 
@@ -55,11 +89,11 @@ create table if not exists public.authorized_users (
 -- Enable RLS
 alter table public.authorized_users enable row level security;
 
--- Allow public read access for the auth check
+-- Allow public read access for the auth check (both anon and authenticated)
 create policy "Public read for auth check"
   on public.authorized_users
   for select
-  to anon
+  to public
   using (true);
 
 -- =========================
