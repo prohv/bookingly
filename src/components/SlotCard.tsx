@@ -7,6 +7,7 @@ type Props = {
 }
 
 export function SlotCard({ slot, onBook, disabled }: Props) {
+  const date = new Date(slot.start_time).toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' })
   const startTime = new Date(slot.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
   const endTime = new Date(slot.end_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
 
@@ -24,9 +25,14 @@ export function SlotCard({ slot, onBook, disabled }: Props) {
             {isFull ? 'FULL' : `${spotsLeft} LEFT`}
           </span>
         </div>
-        <p className="text-lg sm:text-xl font-black text-slate-900">
-          {startTime} – {endTime}
-        </p>
+        <div className="flex flex-wrap items-baseline gap-x-2">
+          <p className="text-lg sm:text-xl font-black text-slate-900 leading-tight">
+            <span className="text-slate-900 font-bold">{date}</span>
+          </p>
+          <p className="text-lg sm:text-xl font-black text-slate-900 leading-tight">
+            {startTime} – {endTime}
+          </p>
+        </div>
         <p className="text-[9px] sm:text-[10px] font-bold text-slate-300 mt-1 uppercase tracking-widest">
           {bookingsCount} / {capacity} SEATS
         </p>
