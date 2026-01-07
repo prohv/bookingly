@@ -34,6 +34,16 @@ export default function Admin({ onBack }: { onBack: () => void }) {
         fetchAdmins()
     }, [])
 
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (showAdminDropdown && !(event.target as Element).closest('.admin-dropdown-container')) {
+                setShowAdminDropdown(null)
+            }
+        }
+        document.addEventListener('mousedown', handleClickOutside)
+        return () => document.removeEventListener('mousedown', handleClickOutside)
+    }, [showAdminDropdown])
+
     const toggleAssignment = async (slotId: string, adminId: string) => {
         const { data: existing } = await supabase
             .from('slot_admins')
@@ -148,7 +158,7 @@ export default function Admin({ onBack }: { onBack: () => void }) {
                         const isFull = slot.is_full || count >= capacity
 
                         return (
-                            <div key={slot.id} className="bg-white rounded-[2rem] overflow-hidden border border-slate-100 shadow-sm transition-all duration-300">
+                            <div key={slot.id} className="bg-white rounded-[2rem] border border-slate-100 shadow-sm transition-all duration-300 relative">
                                 <div className="p-4 sm:p-6 border-b border-slate-50 flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-6">
                                     <div className="flex flex-col gap-1.5 w-full sm:w-auto">
                                         <div className="flex items-center justify-between sm:justify-start gap-4">
@@ -216,7 +226,7 @@ export default function Admin({ onBack }: { onBack: () => void }) {
                                         <p className="text-[10px] font-bold text-slate-300 uppercase italic">No admins assigned</p>
                                     )}
 
-                                    <div className="relative ml-auto">
+                                    <div className="relative ml-auto admin-dropdown-container">
                                         <button
                                             onClick={() => setShowAdminDropdown(showAdminDropdown === slot.id ? null : slot.id)}
                                             className="text-[10px] font-black text-blue-500 hover:text-blue-600 flex items-center gap-1 px-2 py-1 rounded-lg hover:bg-blue-50 transition-all uppercase tracking-widest"
@@ -228,7 +238,7 @@ export default function Admin({ onBack }: { onBack: () => void }) {
                                         </button>
 
                                         {showAdminDropdown === slot.id && (
-                                            <div className="absolute right-0 bottom-full mb-2 w-48 bg-white rounded-2xl shadow-xl border border-slate-100 py-2 z-10 animate-in fade-in slide-in-from-bottom-2 duration-200">
+                                            <div className="absolute right-0 top-full mt-2 w-48 bg-white rounded-2xl shadow-xl border border-slate-100 py-2 z-[60] animate-in fade-in slide-in-from-top-2 duration-200">
                                                 {currentUser && !slot.slot_admins?.some(sa => sa.admin_id === currentUser.id) && (
                                                     <button
                                                         onClick={() => toggleAssignment(slot.id, currentUser.id)}

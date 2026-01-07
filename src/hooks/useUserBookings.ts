@@ -29,6 +29,8 @@ export function useUserBookings() {
                 return
             }
 
+            const normalizedEmail = user.email!.toLowerCase()
+
             const { data, error } = await supabase
                 .from('bookings')
                 .select(`
@@ -43,7 +45,7 @@ export function useUserBookings() {
                         end_time
                     )
                 `)
-                .eq('email', user.email)
+                .eq('email', normalizedEmail)
                 .order('created_at', { ascending: false })
                 .limit(1)
                 .single()

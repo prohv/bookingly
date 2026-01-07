@@ -25,7 +25,12 @@ export function MyBookingCard({ booking, onCancel, loading }: Props) {
                     </svg>
                 </div>
                 <div>
-                    <h2 className="text-base sm:text-lg font-black text-slate-900 leading-tight">You're all set, {booking.name}!</h2>
+                    <h2 className="text-base sm:text-lg font-black text-slate-900 leading-tight">
+                        You're all set, {booking.name}!
+                        <span className="ml-2 text-[10px] sm:text-xs font-bold text-slate-400 opacity-60 font-mono">
+                            {booking.phone}
+                        </span>
+                    </h2>
                     <p className="text-[13px] sm:text-sm font-bold text-green-700/70 mt-0.5">Confirmed for {timeDisplay}</p>
                     <div className="flex items-center gap-2 mt-2">
                         <span className="text-[9px] sm:text-[10px] font-black bg-white px-2 py-0.5 rounded-full text-green-600 border border-green-100 uppercase tracking-widest">Active</span>

@@ -30,11 +30,13 @@ export function useBooking() {
         throw new Error('Not authenticated')
       }
 
+      const normalizedEmail = user.email!.toLowerCase()
+
       // Pre-flight check: Does user already have a booking?
       const { data: existingBooking, error: checkError } = await supabase
         .from('bookings')
         .select('id')
-        .eq('email', user.email)
+        .eq('email', normalizedEmail)
         .maybeSingle()
 
       if (checkError) throw checkError
@@ -45,11 +47,17 @@ export function useBooking() {
       const { error: insertError } = await supabase.from('bookings').insert({
         slot_id: slotId,
         name,
-        email: user.email,
+        email: normalizedEmail,
         phone
       })
 
       if (insertError) {
+        console.error('Insert error details:', {
+          code: insertError.code,
+          message: insertError.message,
+          details: (insertError as any).details,
+          hint: (insertError as any).hint
+        })
         if (insertError.code === '23505') { // Unique constraint violation
           throw new Error('You already have an active booking.')
         }

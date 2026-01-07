@@ -68,7 +68,10 @@ create table if not exists public.bookings (
   constraint bookings_slot_fk
     foreign key (slot_id)
     references public.slots(id)
-    on delete cascade
+    on delete cascade,
+
+  -- Ensure a user can only have one active booking
+  constraint bookings_email_unique unique (email)
 );
 
 -- =========================
