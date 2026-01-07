@@ -1,12 +1,12 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useSlots } from '../hooks/useSlots'
 import { useBooking } from '../hooks/useBooking'
 import { useUserBookings } from '../hooks/useUserBookings'
 import { SlotList } from '../components/SlotList'
 import Loader from '../components/Loader'
-import { BookingForm } from '../components/BookingForm'
 import { MyBookingCard } from '../components/MyBookingCard'
 import { ConfirmationModal } from '../components/ConfirmationModal'
+import { OnboardingModal } from '../components/OnboardingModal'
 import { supabase } from '../lib/supabase'
 
 export default function Dashboard({ isAdmin, onViewAdmin }: { isAdmin?: boolean, onViewAdmin?: () => void }) {
@@ -16,13 +16,55 @@ export default function Dashboard({ isAdmin, onViewAdmin }: { isAdmin?: boolean,
 
     const [selectedSlotId, setSelectedSlotId] = useState<string | null>(null)
     const [showCancelModal, setShowCancelModal] = useState(false)
+    const [showBookingConfirmModal, setShowBookingConfirmModal] = useState(false)
     const [bookingToCancel, setBookingToCancel] = useState<string | null>(null)
 
-    const handleBook = async (name: string, phone: string) => {
-        if (!selectedSlotId) return
+    // User Profile State
+    const [userProfile, setUserProfile] = useState<{ name: string, phone: string, email: string } | null>(null)
+    const [showOnboarding, setShowOnboarding] = useState(false)
+    const [initialLoading, setInitialLoading] = useState(true)
 
-        const ok = await bookSlot(selectedSlotId, name, phone)
+    // Fetch user profile on mount
+    useEffect(() => {
+        const checkUserProfile = async () => {
+            const { data: { user } } = await supabase.auth.getUser()
+            if (!user?.email) return
+
+            const { data } = await supabase
+                .from('authorized_users')
+                .select('name, phone, email')
+                .eq('email', user.email)
+                .single()
+
+            if (data) {
+                if (!data.name || !data.phone) {
+                    setShowOnboarding(true)
+                }
+                setUserProfile(data as any)
+            }
+            setInitialLoading(false)
+        }
+        checkUserProfile()
+    }, [])
+
+    const handleOnboardingComplete = (name: string, phone: string) => {
+        if (userProfile) {
+            setUserProfile({ ...userProfile, name, phone })
+        }
+        setShowOnboarding(false)
+    }
+
+    const openBookingConfirm = (slotId: string) => {
+        setSelectedSlotId(slotId)
+        setShowBookingConfirmModal(true)
+    }
+
+    const handleBook = async () => {
+        if (!selectedSlotId || !userProfile?.name || !userProfile?.phone) return
+
+        const ok = await bookSlot(selectedSlotId, userProfile.name, userProfile.phone)
         if (ok) {
+            setShowBookingConfirmModal(false)
             setSelectedSlotId(null)
             refetch()
             refetchUserBooking()
@@ -47,6 +89,14 @@ export default function Dashboard({ isAdmin, onViewAdmin }: { isAdmin?: boolean,
     }
 
     const handleLogout = () => supabase.auth.signOut()
+
+    if (initialLoading) {
+        return (
+            <div className="min-h-screen bg-white flex items-center justify-center">
+                <Loader />
+            </div>
+        )
+    }
 
     return (
         <div className="min-h-screen bg-white">
@@ -91,39 +141,26 @@ export default function Dashboard({ isAdmin, onViewAdmin }: { isAdmin?: boolean,
                     />
                 )}
 
-                {selectedSlotId ? (
-                    <div className="max-w-md mx-auto bg-white/40 backdrop-blur-xl p-8 rounded-3xl border border-white/20 shadow-2xl animate-in zoom-in-95 duration-300">
-                        <h2 className="text-2xl font-extrabold text-slate-900 mb-6">Complete Booking</h2>
-                        <BookingForm
-                            onSubmit={handleBook}
-                            onCancel={() => setSelectedSlotId(null)}
-                            loading={actionLoading}
-                        />
-                        {bookingError && (
-                            <p className="mt-4 text-sm font-bold text-red-600 text-center">{bookingError}</p>
-                        )}
-                    </div>
-                ) : (
-                    <div className="space-y-8">
-                        {slotsError && (
-                            <div className="bg-red-50 text-red-600 font-bold p-4 rounded-2xl text-center border border-red-100">
-                                {slotsError}
-                            </div>
-                        )}
+                <div className="space-y-8">
+                    {slotsError && (
+                        <div className="bg-red-50 text-red-600 font-bold p-4 rounded-2xl text-center border border-red-100">
+                            {slotsError}
+                        </div>
+                    )}
 
-                        {slotsLoading ? (
-                            <Loader />
-                        ) : (
-                            <SlotList
-                                slots={slots}
-                                onBook={(id) => setSelectedSlotId(id)}
-                                isAnySlotBooked={!!booking}
-                            />
-                        )}
-                    </div>
-                )}
+                    {slotsLoading ? (
+                        <Loader />
+                    ) : (
+                        <SlotList
+                            slots={slots}
+                            onBook={openBookingConfirm}
+                            isAnySlotBooked={!!booking}
+                        />
+                    )}
+                </div>
             </main>
 
+            {/* Cancel Booking Modal */}
             <ConfirmationModal
                 isOpen={showCancelModal}
                 title="Cancel Booking?"
@@ -131,6 +168,34 @@ export default function Dashboard({ isAdmin, onViewAdmin }: { isAdmin?: boolean,
                 onConfirm={handleCancel}
                 onCancel={() => { setShowCancelModal(false); setBookingToCancel(null); }}
                 loading={actionLoading}
+            />
+
+            {/* Confirm Booking Modal */}
+            <ConfirmationModal
+                isOpen={showBookingConfirmModal}
+                title="Confirm Booking"
+                message="Are you sure you want to book this slot?"
+                onConfirm={handleBook}
+                onCancel={() => { setShowBookingConfirmModal(false); setSelectedSlotId(null); }}
+                loading={actionLoading}
+                confirmText="Confirm Booking"
+                cancelText="Cancel"
+                variant="success"
+            />
+
+            {/* Show error if booking fails */}
+            {bookingError && (
+                <div className="fixed bottom-4 right-4 bg-red-50 text-red-600 p-4 rounded-xl border border-red-100 shadow-xl z-[100] animate-in slide-in-from-bottom-2">
+                    <p className="font-bold text-sm">{bookingError}</p>
+                    <button onClick={() => window.location.reload()} className="text-xs underline mt-1">Dismiss</button>
+                </div>
+            )}
+
+            {/* Onboarding Modal - Force Open if needed */}
+            <OnboardingModal
+                isOpen={showOnboarding}
+                email={userProfile?.email || ''}
+                onComplete={handleOnboardingComplete}
             />
         </div>
     )

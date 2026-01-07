@@ -90,6 +90,7 @@ create table if not exists public.authorized_users (
   id uuid primary key default gen_random_uuid(),
   email text unique not null,
   name text, -- New column for display names
+  phone text, -- New column for phone numbers
   role text not null check (role in ('participant', 'admin')),
   created_at timestamptz default now()
 );

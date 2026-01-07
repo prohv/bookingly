@@ -156,17 +156,20 @@ export default function Admin({ onBack }: { onBack: () => void }) {
                         const count = slot.current_bookings || 0
                         const capacity = slot.capacity || 1
                         const isFull = slot.is_full || count >= capacity
+                        const isPast = new Date(slot.end_time) < new Date()
 
                         return (
-                            <div key={slot.id} className="bg-white rounded-[2rem] border border-slate-100 shadow-sm transition-all duration-300 relative">
+                            <div key={slot.id} className={`rounded-[2rem] border shadow-sm transition-all duration-300 relative ${isPast ? 'bg-slate-50 border-slate-100 opacity-75 hover:opacity-100' : 'bg-white border-slate-100'}`}>
                                 <div className="p-4 sm:p-6 border-b border-slate-50 flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-6">
                                     <div className="flex flex-col gap-1.5 w-full sm:w-auto">
                                         <div className="flex items-center justify-between sm:justify-start gap-4">
-                                            <h3 className="text-base sm:text-2xl font-black text-slate-900 leading-tight">{startTime}</h3>
+                                            <h3 className={`text-base sm:text-2xl font-black leading-tight ${isPast ? 'text-slate-500' : 'text-slate-900'}`}>{startTime}</h3>
 
                                             {/* Desktop Tags (Back on the left) */}
                                             <div className="hidden sm:flex items-center gap-3">
-                                                {isFull ? (
+                                                {isPast ? (
+                                                    <span className="bg-slate-100 text-slate-500 text-[11px] font-black px-2 py-0.5 rounded-full uppercase tracking-tighter">Closed</span>
+                                                ) : isFull ? (
                                                     <span className="bg-red-50 text-red-600 text-[11px] font-black px-2 py-0.5 rounded-full uppercase tracking-tighter">Full</span>
                                                 ) : (
                                                     <span className="bg-green-50 text-green-600 text-[11px] font-black px-2 py-0.5 rounded-full uppercase tracking-tighter">Open</span>
@@ -182,7 +185,9 @@ export default function Admin({ onBack }: { onBack: () => void }) {
 
                                         {/* Mobile Tags (Line 2) */}
                                         <div className="flex sm:hidden items-center gap-2">
-                                            {isFull ? (
+                                            {isPast ? (
+                                                <span className="bg-slate-100 text-slate-500 text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-tighter">Closed</span>
+                                            ) : isFull ? (
                                                 <span className="bg-red-50 text-red-600 text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-tighter">Full</span>
                                             ) : (
                                                 <span className="bg-green-50 text-green-600 text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-tighter">Open</span>

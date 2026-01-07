@@ -53,11 +53,21 @@ export function useAdminData() {
                         )
                     )
                 `)
-                .gte('end_time', new Date().toISOString())
                 .order('start_time', { ascending: true })
 
             if (slotsError) throw slotsError
-            setData((slots as any) as AdminSlot[])
+
+            const now = new Date()
+            const allSlots = (slots as any) as AdminSlot[]
+
+            // Split into active and past
+            const activeSlots = allSlots.filter(s => new Date(s.end_time) >= now)
+            const pastSlots = allSlots.filter(s => new Date(s.end_time) < now)
+
+            // activeSlots are already sorted ASC by DB
+            // pastSlots are sorted ASC by DB, so reverse them to get DESC (most recent past first)
+
+            setData([...activeSlots, ...pastSlots.reverse()])
         } catch (err: any) {
             setError(err.message)
         } finally {
